@@ -1,7 +1,9 @@
 # Rust build artifacts
 /target
 **/*.rs.bk
-Cargo.lock
+
+# Keep Cargo.lock for binaries (this is a binary app with src/main.rs)
+# Cargo.lock should be committed for reproducible builds
 
 # IDE
 .idea/
@@ -12,3 +14,23 @@ Cargo.lock
 # OS files
 .DS_Store
 Thumbs.db
+
+# Node.js frontend build artifacts
+/frontend/node_modules/
+/frontend/dist/
+/frontend/build/
+/frontend/.next/
+
+# Test fixtures and coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
