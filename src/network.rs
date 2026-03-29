@@ -10,6 +10,7 @@ use libp2p::{
     PeerId,
     SwarmBuilder,
 };
+use rand::{rngs::OsRng, RngCore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
@@ -48,9 +49,9 @@ impl Network {
         // In production, this would include relay addresses and WebRTC endpoints
         let addr: Multiaddr = format!("/ip4/127.0.0.1/tcp/3001/p2p/{}", self.peer_id)
             .parse()
-            .ok();
+            .ok()?;
         
-        self.multiaddr.clone().or(addr)
+        self.multiaddr.clone().or(Some(addr))
     }
 
     /// Add a peer to the connected peers list
@@ -79,20 +80,18 @@ impl Network {
 
     /// Generate a connection token that encodes peer information
     pub fn generate_connection_token(&self, file_id: &str) -> String {
-        use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+        use base64::Engine;
         
-        let mut data = format!("{}:{}", self.peer_id, file_id).into_bytes();
-        // Add some randomness
-        data.extend_from_slice(&rand::random::<[u8; 16]>());
+        let data = format!("{}:{}", self.peer_id, file_id);
         
-        URL_SAFE_NO_PAD.encode(data)
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(data)
     }
 
     /// Parse a connection token to extract peer and file info
     pub fn parse_connection_token(token: &str) -> Option<(PeerId, String)> {
-        use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+        use base64::Engine;
         
-        let decoded = URL_SAFE_NO_PAD.decode(token).ok()?;
+        let decoded = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(token).ok()?;
         let text = String::from_utf8(decoded).ok()?;
         
         let parts: Vec<&str> = text.split(':').collect();
@@ -117,8 +116,11 @@ mod tests {
         let file_id = "test-file-123";
         let token = network.generate_connection_token(file_id);
         
-        let (parsed_peer, parsed_file) = Network::parse_connection_token(&token).unwrap();
+        // Token should be parseable
+        let result = Network::parse_connection_token(&token);
+        assert!(result.is_some());
         
+        let (parsed_peer, parsed_file) = result.unwrap();
         assert_eq!(parsed_peer, network.peer_id());
         assert_eq!(parsed_file, file_id);
     }

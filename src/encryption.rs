@@ -1,9 +1,12 @@
 //! End-to-end encryption module using ChaCha20-Poly1305
 
-use chacha20poly1305::{aead::Aead, ChaCha20Poly1305, Key, Nonce};
-use rand::rngs::OsRng;
+use chacha20poly1305::{aead::Aead, ChaCha20Poly1305, KeyInit, Nonce};
+use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+// Re-export Key type for convenience
+pub use chacha20poly1305::Key;
 
 #[derive(Error, Debug)]
 pub enum EncryptionError {
@@ -39,9 +42,11 @@ pub fn generate_key() -> Result<Key, EncryptionError> {
 /// Encrypt data using ChaCha20-Poly1305
 pub fn encrypt(data: &[u8], key: &Key) -> Result<(Vec<u8>, Vec<u8>), EncryptionError> {
     let cipher = ChaCha20Poly1305::new(key);
-    let nonce = Nonce::from_slice(&OsRng.gen::<[u8; 12]>());
+    let mut nonce_bytes = [0u8; 12];
+    OsRng.fill_bytes(&mut nonce_bytes);
+    let nonce = Nonce::from(nonce_bytes);
     
-    let encrypted = cipher.encrypt(nonce, data)
+    let encrypted = cipher.encrypt(&nonce, data)
         .map_err(|e| EncryptionError::EncryptionFailed(e.to_string()))?;
     
     Ok((encrypted, nonce.to_vec()))
@@ -60,9 +65,10 @@ pub fn decrypt(encrypted_data: &[u8], nonce: &[u8], key: &Key) -> Result<Vec<u8>
 
 /// Generate a secure transfer token
 pub fn generate_token() -> String {
-    use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-    let bytes: Vec<u8> = (0..32).map(|_| OsRng.gen()).collect();
-    URL_SAFE_NO_PAD.encode(bytes)
+    use base64::Engine;
+    let mut bytes = vec![0u8; 32];
+    OsRng.fill_bytes(&mut bytes);
+    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
 }
 
 #[cfg(test)]

@@ -4,7 +4,7 @@ use anyhow::Result;
 use image::{DynamicImage, ImageBuffer, Rgba};
 
 /// Generate a QR code as an image
-pub fn generate_qr_code(data: &str, size: u32) -> Result<DynamicImage> {
+pub fn generate_qr_code(_data: &str, size: u32) -> Result<DynamicImage> {
     // In a full implementation, we would use a QR code library like qrcode
     // For now, return a placeholder that indicates the concept
     
@@ -22,14 +22,14 @@ pub fn generate_qr_code(data: &str, size: u32) -> Result<DynamicImage> {
 
 /// Convert QR code image to base64 data URL for embedding in HTML
 pub fn image_to_data_url(img: &DynamicImage) -> Result<String> {
-    use base64::{engine::general_purpose::STANDARD, Engine};
+    use base64::Engine;
     
     let mut buffer = Vec::new();
     img.write_to(&mut std::io::Cursor::new(&mut buffer), image::ImageFormat::Png)
         .map_err(|e| anyhow::anyhow!("Failed to encode image: {}", e))?;
     
-    let base64 = STANDARD.encode(&buffer);
-    Ok(format!("data:image/png;base64,{}", base64))
+    let base64_str = base64::engine::general_purpose::STANDARD.encode(&buffer);
+    Ok(format!("data:image/png;base64,{}", base64_str))
 }
 
 #[cfg(test)]
